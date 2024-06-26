@@ -7,6 +7,7 @@ namespace PhpClickHouseLaravel;
 use ClickHouseDB\Client;
 use Closure;
 use Illuminate\Database\Connection as BaseConnection;
+use PhpClickHouseLaravel\Events\QueryExecuted;
 
 class Connection extends BaseConnection
 {
@@ -78,16 +79,16 @@ class Connection extends BaseConnection
         $query = QueryGrammar::prepareParameters($query);
 
         return $this->run($query, $bindings, function ($query, $bindings) {
-            return $this->client->select($query, $bindings)->rows();
-        });
+            return $this->client->select($query, $bindings);
+        })->rows();
     }
 
     /** @inheritDoc */
     public function statement($query, $bindings = []): bool
     {
-        return $this->run($query, $bindings, function ($query, $bindings) {
-            return !$this->client->write($query, $bindings)->isError();
-        });
+        return ! $this->run($query, $bindings, function ($query, $bindings) {
+            return $this->client->write($query, $bindings);
+        })->isError();
     }
 
     /** @inheritDoc */
@@ -101,9 +102,21 @@ class Connection extends BaseConnection
     {
         $start = microtime(true);
 
+        /** @var \ClickHouseDB\Statement */
         $result = $callback($query, $bindings);
 
         $this->logQuery($query, $bindings, $this->getElapsedTime($start));
+
+        $statistics = $result->statistics();
+
+        $this->event(new QueryExecuted(
+            $query,
+            $bindings,
+            $statistics['elapsed'],
+            $statistics['rows_read'],
+            $statistics['bytes_read'],
+            $this,
+        ));
 
         return $result;
     }
