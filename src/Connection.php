@@ -112,9 +112,9 @@ class Connection extends BaseConnection
         $this->event(new QueryExecuted(
             $query,
             $bindings,
-            $statistics['elapsed'],
-            $statistics['rows_read'],
-            $statistics['bytes_read'],
+            $statistics['elapsed'] ?? null,
+            $statistics['rows_read'] ?? null,
+            $statistics['bytes_read'] ?? null,
             $this,
         ));
 
