@@ -46,13 +46,13 @@ class Connection extends BaseConnection
     /** @inheritDoc */
     protected function getDefaultQueryGrammar()
     {
-        return new QueryGrammar();
+        return new QueryGrammar($this);
     }
 
     /** @inheritDoc */
     protected function getDefaultSchemaGrammar()
     {
-        return new SchemaGrammar();
+        return new SchemaGrammar($this);
     }
 
     /** @inheritDoc */
@@ -93,6 +93,10 @@ class Connection extends BaseConnection
     /** @inheritDoc */
     protected function run($query, $bindings, Closure $callback)
     {
+        foreach ($this->beforeExecutingCallbacks as $beforeExecutingCallback) {
+            $beforeExecutingCallback($query, $bindings, $this);
+        }
+
         $start = microtime(true);
 
         $result = $callback($query, $bindings);
